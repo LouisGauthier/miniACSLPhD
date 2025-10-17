@@ -1,0 +1,25 @@
+PREREQUISITES
+-------------
+
+This version is known to compile with:
+
+ - Coq 8.13.2 or higher
+ - SCons 4.0.1.post1
+ - OCaml 4.12
+ - OCaml-Num 1.4.2
+ - OCamlbuild 0.14.0
+ - GNU C preprocessor 8.3.0
+ - stdpp 1.6.0
+
+BUILDING INSTRUCTIONS
+---------------------
+
+Say "scons" to build the full library, or "scons some_module.vo" to just 
+build some_module.vo (and its dependencies).
+
+In addition to common Make options like -j N and -k, SCons supports some 
+useful options of its own, such as --debug=time, which displays the time 
+spent executing individual build commands.
+
+scons -c replaces Make clean
+
