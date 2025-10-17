@@ -1,3 +1,12 @@
+MiniACSL Files
+
+Files of Miniacsl are all in the core_c folder. It conatins :
+- Implementation of terms an term evaluation in files : terms.v, term_eval.v
+- Implementation of predicates and predicate evaluation in files :
+  predicates.v, predicate_eval.v
+- Implementation of opertaions necessary for term and predicate evaluation and
+  proofs on some of these operations in file : operations_term.v
+  
 PREREQUISITES
 -------------
 
