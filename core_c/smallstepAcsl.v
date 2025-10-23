@@ -64,6 +64,7 @@ Fixpoint locals2 (K : iType) (k : acslctx K) {struct k} : stack K :=
   end.
 Arguments locals2 {_} _.
 
+(*Conversion from ACSL statements to C statements *)
 Fixpoint stmtacsl_to_stmt `{Env K} (sa : stmtacsl K) :=
   match sa with
   | SADo e => SDo e
@@ -82,11 +83,11 @@ Fixpoint stmtacsl_to_stmt `{Env K} (sa : stmtacsl K) :=
   | _ => SSkip
   end.
 
-(*ATTENTION : si une semaine pour labals 
-logiques alors go sinon pas de labels logiques (Here, ...)*)
 Reserved Notation "Γ \ δ ⊢a S1 ⇒ S2"
   (at level 74, δ at next level,
     format "Γ \  δ  ⊢a  '[' S1  ⇒ '/'  S2 ']'").
+
+(*Reduction rules for C and ACSL statements *)
 Inductive acslstep `{Env K} (Γ : env K) (δ : funacslenv K) : relation (stateacsl K) :=
   (** Simple statements *)
 | acslstep_skip m k labmap stmap :
@@ -253,11 +254,20 @@ Inductive acslstep `{Env K} (Γ : env K) (δ : funacslenv K) : relation (stateac
   direction_out d (stmtacsl_to_stmt s) →
   Γ\ δ ⊢a Stateacsl (ALocal o τ :: k) (AFStmt d s) m labmap stmap ⇒
     Stateacsl k (AFStmt d (SALocal τ s)) (mem_free o m) labmap stmap
-
-| acslstep_assert k stmap labmap m p pr l :
-  pr = predicate_to_prop p Γ (locals2 k) stmap m l labmap  ->
+    
+(** ACSL assertions 
+ Case the predicate is true *)
+| acslstep_assert k stmap labmap m p l pre :
+  predicate_to_prop p Γ (locals2 k) stmap m l labmap = Some pre ->
+  pre ->
   Γ\ δ ⊢a Stateacsl k (AFStmt ↘ (SAAssert p)) m labmap stmap ⇒ 
     Stateacsl k (AFStmt ↗ (SAAssert p)) m labmap stmap
+(** Case the preicate is false *)
+| acslstep_assert_fail k stmap labmap m p l pre :
+  predicate_to_prop p Γ (locals2 k) stmap m l labmap = Some pre ->
+  not pre ->
+  Γ\ δ ⊢a Stateacsl k (AFStmt ↘ (SAAssert p)) m labmap stmap ⇒ 
+    Stateacsl k (AFUndef (AUndefPred p)) m labmap stmap
  
   
 where "Γ \ δ  ⊢a S1 ⇒ S2" := (@acslstep _ _ Γ δ S1%S S2%S) : C_scope.

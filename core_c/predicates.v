@@ -1,5 +1,6 @@
 From stdpp Require Import mapset natmap.
 Require Export  terms.
+(* Definition of ACSL predicates *)
 Inductive predic (K : iType) : iType :=
 | PTrue : predic K
 | PFalse : predic K

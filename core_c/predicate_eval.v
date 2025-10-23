@@ -4,6 +4,7 @@ Require Import List String stringmap.
 Import ListNotations.
 Local Coercion Z.of_nat: nat >-> Z.
 
+(* Predicate to know wether a value is initialized or not *)
 Inductive init_val_list `{Env K} : list (val K) -> Prop :=
 | init_list : forall (lv tlv: list (val K)) (hlv : val K),
     lv = hlv::tlv ->
@@ -35,7 +36,7 @@ with
     init_bit_list vecb ->
     init_val v.
 
-
+(* Evaluation of ACSL predicates : Translatio from predicates to Prop*)
 Fixpoint predicate_to_prop `{Env K} (p : predic K ) (en : env K)
   (rho : stack K) (rhomap : stringmap (stack K)) (m : mem K) (l : labelname) (labmap : stringmap (mem K)): option Prop :=
   match p with

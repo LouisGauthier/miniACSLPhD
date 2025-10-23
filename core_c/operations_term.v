@@ -6,19 +6,19 @@ Local Open Scope ctype_scope.
 Local Open Scope Z_scope.
 Local Open Scope int_type_scope.
 Local Coercion Z.of_nat: nat >-> Z.
+
 Section operations_definitions2.
   Context `{Env K}.
-  Print ptr.
-  
+
+  (* ACSL values *)
   Inductive val_term (K : iType) : iType :=
   | ValC : val K -> val_term K
   | VInteger : Z -> val_term K.
-
+  
   Arguments ValC {_} _.
   Arguments VInteger {_} _.
   
-
-  (* Divide by zero : return non specified Z *)
+  (* Underspecified constructor for division by zero *)
   Parameter divZ : Z -> Z.
   
   
@@ -26,15 +26,15 @@ Section operations_definitions2.
   | TArithOp : arithop -> tbinop
   | TShiftOp : shiftop -> tbinop
   | TBitOp : bitop -> tbinop.
- 
+  
   Definition tbin_to_bin (op : tbinop):=
     match op with
     | TArithOp opa => ArithOp opa
     | TShiftOp ops => ShiftOp ops 
     | TBitOp opb => BitOp opb
     end.
-
-  (* Arithop for terms *)
+  
+  (* Arithop for integers with the divZ constructor if needed *)
   Definition arithopZ (op : arithop)(x y : Z) : Z :=
     match op, y with
     | DivOp, 0 => divZ x
@@ -45,7 +45,6 @@ Section operations_definitions2.
     | ModOp, _ => x mod y
     end.
 
-Parameter invalidmemaccess : ptr K -> Z.
   
   Inductive tunop :=
   | TNegOp : tunop
@@ -84,7 +83,8 @@ Parameter invalidmemaccess : ptr K -> Z.
     | VInt τi1 x1, VInt τi2 x2 => VInt (int_binop_type_of op τi1 τi2) (new_int_binop op x1 x2 τi1 τi2)
     |_,_ => base_val_binop en op v1 v2
     end.
-
+  
+  (* Predicate to know when a comparison operation is allowed *)
   Definition valt_compop_ok (en : env K) (v1 v2 : val_term K) : Prop :=
     match v1,v2 with
     | VInteger _, VInteger _ => True
@@ -100,7 +100,7 @@ Parameter invalidmemaccess : ptr K -> Z.
     end.
 
 
-  (* New operation on val which take divide by zero in account *)
+  (* New operation on c values which take divide by zero in account *)
   Definition new_val_binop (en : env K) (op : binop) (v1 v2 : val K) : val K :=
     match v1, v2 with
     | VBase vb1, VBase vb2 => VBase (new_base_val_binop en op vb1 vb2)
@@ -119,6 +119,7 @@ Parameter invalidmemaccess : ptr K -> Z.
     | _,_,_ => vt1
     end.
 
+  (* Inductive predicate used to know if a value and a list of values can be compared (predicate used in proofs) *)
   Inductive comparable : val K -> Prop :=
   | cmp_base : forall b, comparable (VBase b)
   | cmp_struct : forall t l, comparable_list l -> comparable (VStruct t l)
@@ -129,7 +130,7 @@ Parameter invalidmemaccess : ptr K -> Z.
   | cmp_nil : comparable_list []
   | cmp_cons : forall v l, comparable v -> comparable_list l -> comparable_list (v::l).
 
-   (* Comparison of values *)
+   (* Equality between C values *)
   Inductive eq_val : env K -> val K -> val K -> Prop :=
   | eq_base : forall(en : env K) (vb1 vb2 : base_val K),
       new_base_val_binop en (CompOp EqOp) vb1 vb2 = VInt sintT 1 ->
@@ -164,7 +165,8 @@ Parameter invalidmemaccess : ptr K -> Z.
   | eq_same : forall (en : env K)(v1 v2 : val K),
       v1 = v2 ->
       eq_val en v1 v2
-  (* Comparison of list of values *)
+             
+  (* Equality between list of C values *)
   with eq_list : env K -> list (val K) -> list (val K) -> Prop :=
   | eq_list_empty : forall (en : env K) ,
       eq_list  en [] []
@@ -183,6 +185,7 @@ Parameter invalidmemaccess : ptr K -> Z.
       new_val_binop en (CompOp op) v1 v2 = VBase (VInt sintT 1) ->
       comp_val op en v1 v2.
 
+  (* Equality between ACSL values *)
   Inductive eq_valt : env K -> val_term K -> val_term K -> Prop :=
   | eq_valc : forall (en : env K)(v1 v2 : val K),
       eq_val en v1 v2 -> eq_valt en (ValC v1) (ValC v2)
@@ -195,25 +198,28 @@ Parameter invalidmemaccess : ptr K -> Z.
   | eq_samet : forall (en : env K) (v : val_term K),
       eq_valt en v v.
       
-  
+  (* Comparison of integers *)
   Inductive comp_int : compop -> Z -> Z -> Prop :=
   | eq_int : forall (x y: Z) , x = y -> comp_int EqOp x y
   | lt_int : forall (x y : Z), x < y -> comp_int LtOp x y
   | le_int : forall (x y : Z), x <= y -> comp_int LtOp x y.
   
- 
+ (* Comparison of ACSL values *)
   Inductive comp_valt : compop -> env K -> val_term K -> val_term K -> Prop :=
   | comp_valc : forall (en : env K)(v1 v2 : val K)(op : compop),
       comp_val op en v1 v2 -> comp_valt op en (ValC v1) (ValC v2)
   | eq_valuet : forall (en : env K)(v1 v2 : val_term K),
       eq_valt en v1 v2 -> comp_valt EqOp en v1 v2
   | comp_valInt : forall (en : env K)(x y : Z)(op : compop),
-      comp_int op x y -> comp_valt op en (VInteger x) (VInteger y).
-  Print tbinop.
+      comp_int op x y -> comp_valt op en (VInteger x) (VInteger y)
+  | comp_intInteger : forall (en : env K)(x y : Z)(op : compop)(ty : int_type K),
+      comp_int op x y -> comp_valt op en (ValC (VBase (VInt ty x))) (VInteger y)
+  | comp_integerInt : forall (en : env K)(x y : Z)(op : compop)(ty : int_type K),
+      comp_int op x y -> comp_valt op en (VInteger x) (ValC (VBase (VInt ty y))). 
   
     
-    Lemma comp_valt_test : forall en, ~(comp_valt EqOp en (VInteger 8) (VInteger 0))/\
-                                         (comp_valt EqOp en (VInteger (divZ 4)) (VInteger (divZ 4))).
+  Lemma comp_valt_test : forall en, ~(comp_valt EqOp en (VInteger 8) (VInteger 0))/\
+                                      (comp_valt EqOp en (VInteger (divZ 4)) (VInteger (divZ 4))).
   Proof.
     intros.
     split.
@@ -227,8 +233,6 @@ Parameter invalidmemaccess : ptr K -> Z.
     constructor.
     reflexivity.
   Qed.
-
-  Print VInt.
 
   (* Assume that equality furnished in CH2O is symmetric*)
   Axiom eq_val_sym : forall(v1 v2 : base_val K)(en : env K),
@@ -245,59 +249,53 @@ Parameter invalidmemaccess : ptr K -> Z.
       new_base_val_binop en (CompOp EqOp) v2 v3 = (intV{sintT} 1)%B ->
       new_base_val_binop en (CompOp EqOp) v1 v3 = (intV{sintT} 1)%B.
 
-  Axiom ptr_compare_symm : forall (p1 p2 : ptr K)(en : env K),
-      ptr_compare en EqOp p1 p2 -> ptr_compare en EqOp p2 p1.
-
-  Axiom ptr_compare_trans : forall (p1 p2 p3 : ptr K) (en : env K),
-      ptr_compare en EqOp p1 p2 -> ptr_compare en EqOp p2 p3 -> ptr_compare en EqOp p1 p3.
-
+  (* Assume that comparing two C int is equivalent to compare their int part in their 
+abstract representation*)
   Axiom int_cast_eq : forall (t t2 : int_type K) (en : env K) (x y : Z),
       new_base_val_binop en (CompOp EqOp) (VInt t x) (VInt t2 y) = (VInt sintT 1) <-> x = y.
-  Check val_flatten.
 
-
-      
   Section val_ind.
 
 
     Context (P : val K → Prop). (* The inductive property *)
-  Context (HBase : ∀ b, P (VBase b)). (* VBase case *)
-  Context (HStructNil :∀t, P (VStruct t [])). (* VStruct [] case *)
-  Context (HStructCons : ∀ v l t t', P v → P (VStruct t l) → P (VStruct t' (v::l))).
+    Context (HBase : ∀ b, P (VBase b)). (* VBase case *)
+    Context (HStructNil :∀t, P (VStruct t [])). (* VStruct [] case *)
+    Context (HStructCons : ∀ v l t t', P v → P (VStruct t l) → P (VStruct t' (v::l))).
     (* VStruct (v::l) case *)
-  Context (HArrayNil :∀ t, P (VArray t [])). (* VArray [] case *)
-  Context (HArrayCons : ∀ v l t, P v → P (VArray t l) → P (VArray t (v::l))).
-  (* VStruct (v::l) case *)
-  Context (HUnion :∀ t i v, P (VUnion t i v)).
-  Context (HUnionAllNil : ∀ t, P (VUnionAll t [])).
-  Context (HUnionAllCons : ∀ v l t t', P v -> P (VUnionAll t l) -> P(VUnionAll t' (v::l))).
-  
-  Fixpoint val_ind' v :=
-    match v as v' return P v' with
-    | VBase v => HBase v (* If v is a base, apply HBase *)
-    | VStruct t l =>
-        (* If it is a struct, do a recusion on the list
+    Context (HArrayNil :∀ t, P (VArray t [])). (* VArray [] case *)
+    Context (HArrayCons : ∀ v l t, P v → P (VArray t l) → P (VArray t (v::l))).
+    (* VStruct (v::l) case *)
+    Context (HUnion :∀ t i v, P (VUnion t i v)).
+    Context (HUnionAllNil : ∀ t, P (VUnionAll t [])).
+    Context (HUnionAllCons : ∀ v l t t', P v -> P (VUnionAll t l) -> P(VUnionAll t' (v::l))).
+    
+    Fixpoint val_ind' v :=
+      match v as v' return P v' with
+      | VBase v => HBase v (* If v is a base, apply HBase *)
+      | VStruct t l =>
+          (* If it is a struct, do a recusion on the list
            We need to define the list function internally
            and not as a joined recursion else termination checker
            will complain *)
-        let fix val_list_ind l := match l as l' return P (VStruct t l') with
-                                  | [] => HStructNil t
-                                  | v::l => HStructCons v l t _ (val_ind' v) (val_list_ind l)
-                                  end in val_list_ind l
-    | VArray t l =>
-        let fix val_list_ind l := match l as l' return P (VArray t l') with
-                                  | [] => HArrayNil t
-                                  | v::l => HArrayCons v l t (val_ind' v) (val_list_ind l)
-                                  end in val_list_ind l
-    | VUnion t i v => HUnion t i v
-    | VUnionAll t l =>
-        let fix val_list_ind l := match l as l' return P (VUnionAll t l') with
-                                  | [] => HUnionAllNil t
-                                  | v::l => HUnionAllCons v l t _ (val_ind' v) (val_list_ind l)
-                                  end in val_list_ind l
-    end.
+          let fix val_list_ind l := match l as l' return P (VStruct t l') with
+                                    | [] => HStructNil t
+                                    | v::l => HStructCons v l t _ (val_ind' v) (val_list_ind l)
+                                    end in val_list_ind l
+      | VArray t l =>
+          let fix val_list_ind l := match l as l' return P (VArray t l') with
+                                    | [] => HArrayNil t
+                                    | v::l => HArrayCons v l t (val_ind' v) (val_list_ind l)
+                                    end in val_list_ind l
+      | VUnion t i v => HUnion t i v
+      | VUnionAll t l =>
+          let fix val_list_ind l := match l as l' return P (VUnionAll t l') with
+                                    | [] => HUnionAllNil t
+                                    | v::l => HUnionAllCons v l t _ (val_ind' v) (val_list_ind l)
+                                    end in val_list_ind l
+      end.
   End val_ind.
-
+  
+  (* Proof of reflexivity of the equality between ACSL values *)
   Lemma eq_valt_reflexive v en : eq_valt en v v.
   Proof.
     intros.
@@ -308,7 +306,8 @@ Parameter invalidmemaccess : ptr K -> Z.
       with eq_list_rec := Induction for eq_list Sort Prop.
 
 
-  Lemma eq_val_symmetric : forall(v1 v2 : val K)(en : env K),
+  (* Proof of symetry of the equality between C values *)
+  Lemma eq_val_symetric : forall(v1 v2 : val K)(en : env K),
       eq_val en v1 v2 -> eq_val en v2 v1.
   Proof.
     intros vl vr en.
@@ -333,20 +332,22 @@ Parameter invalidmemaccess : ptr K -> Z.
     - intros. apply eq_list_same.
   Qed.
 
-   Lemma eq_val_term_symmetric : forall(v1 v2 : val_term K)(en : env K),
+  (* Proof of symetry between ACSL values *) 
+  Lemma eq_val_term_symetric : forall(v1 v2 : val_term K)(en : env K),
       eq_valt en v1 v2 -> eq_valt en v2 v1.
-     intros. inversion H0.
-     apply eq_valc.
-     apply eq_val_symmetric.
-     assumption.
-     apply eq_integer.
-     symmetry.
-     assumption.
-     apply eq_intInteger. lia.
-     apply eq_integerInt. lia.
-     apply eq_samet.
-   Qed.
-   
+    intros. inversion H0.
+    apply eq_valc.
+    apply eq_val_symetric.
+    assumption.
+    apply eq_integer.
+    symmetry.
+    assumption.
+    apply eq_intInteger. lia.
+    apply eq_integerInt. lia.
+    apply eq_samet.
+  Qed.
+
+  (* Proof of transitivity of equality between C values*)
   Lemma eq_val_transitive : forall (v1 v2 v3 : val K) (en : env K),
       eq_val en v1 v2 -> eq_val en v2 v3 -> eq_val en v1 v3. 
   Proof.
@@ -429,21 +430,21 @@ Parameter invalidmemaccess : ptr K -> Z.
     - exact H12.
   Qed.
 
-
-  Print base_val_binop.
+  
+  (* Proof of transitivity of equality between ACSL values*)
   Lemma eq_valt_transitive : forall (v1 v2 v3 : val_term K) (en : env K),
       valt_compop_ok en v1 v2 -> valt_compop_ok en v2 v3 -> eq_valt en v1 v2 -> eq_valt en v2 v3 -> eq_valt en v1 v3. 
     intros v1 v2 v3 en H0 H00 H1 H2.
     inversion H1.
     inversion H2.
     + apply eq_valc.
-    rewrite <- H6 in H9.
-    injection H9.
-    intro.
-    rewrite <- H11 in H3.
-    apply (eq_val_transitive v0 v5 v6).
-    assumption.
-    assumption.
+      rewrite <- H6 in H9.
+      injection H9.
+      intro.
+      rewrite <- H11 in H3.
+      apply (eq_val_transitive v0 v5 v6).
+      assumption.
+      assumption.
     + rewrite <- H9 in H6. discriminate.
     + rewrite <- H9 in H6. discriminate.
     + rewrite <- H9 in H6. injection H6. intro.
@@ -542,5 +543,5 @@ Parameter invalidmemaccess : ptr K -> Z.
       discriminate. rewrite <- H6. constructor. assumption.
     + assumption.
   Qed.
-      
+  
 End operations_definitions2.

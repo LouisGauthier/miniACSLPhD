@@ -2,7 +2,7 @@ From stdpp Require Import mapset natmap.
 Require Export  operations_term.
 Notation lrval K := (ptr K + val K)%type.
 Notation lrval_term K := (ptr K + val_term K)%type.
-
+(* Definition  of ACSL terms *)
 Inductive term (K:iType) : iType :=
 | TVar : nat -> term K
 | TVal : lrval_term K -> term K
