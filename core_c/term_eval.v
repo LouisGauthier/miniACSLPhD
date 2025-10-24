@@ -6,7 +6,6 @@ Local Coercion Z.of_nat: nat >-> Z.
 Notation lrval_term K := (ptr K + val_term K)%type.
 Arguments ValC {_} _.
 Arguments VInteger {_} _.
-Check maybe (inl).
 
 (* Définition of maps to keep track of memory states for every labels crossed *)
 Definition memmap (K : iType) := stringmap (mem K).
