@@ -22,16 +22,16 @@ Lemma int_pre_castneq : int_typed 5 (int_promote sintT ∪ int_promote sintT) ->
   rewrite -> (int_pre_cast_self 1 (int_promote sintT ∪ int_promote sintT)) .
   discriminate. assumption. assumption.
 Qed.
-Print env_type_env.
-Print int_cast_spec.
-Print IntEnvSpec.
+
 Context `{IntEnvSpec K (H:=@env_type_env K H)}.
+
 Lemma int_cast_self x τi : int_typed x τi → int_cast τi x = x.
 Proof.
   Print int_cast_spec.
   intros; rewrite (int_cast_spec) by eauto using int_pre_cast_ok_self.
   eauto using int_pre_cast_self.
 Qed.
+
 Lemma int_castneq : int_typed 5 (int_promote sintT ∪ int_promote sintT) ->
                     int_typed 1 (int_promote sintT ∪ int_promote sintT) ->
                     (int_cast (int_promote sintT ∪ int_promote sintT) 1) <>
@@ -66,8 +66,6 @@ Proof.
   Check intV{sintT} 2. Print IntEnvSpec. Print int_pre_cast. Print env_type_env. Check H1.
   apply a.
   Qed.
-
-Print comp_valt.
 
  
 Lemma eq_paper2 : forall en, ~(comp_valt EqOp en (VInteger 8) (VInteger 0))/\

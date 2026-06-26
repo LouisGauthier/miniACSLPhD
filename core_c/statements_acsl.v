@@ -10,7 +10,11 @@ Reserved Notation "Γ \ δ ⊢ₛ S1 ⇒ S2"
     format "Γ \  δ  ⊢ₛ  '[' S1  ⇒ '/'  S2 ']'").
 Print sctx_item.
 
-(** ACSL Statements *)
+(** * Statements *)
+(** The construct [SDo e] executes the expression [e] and ignores the result.
+The construct [SLocal τ s] opens a new scope with one variable of type τ. Since
+we use De Bruijn indexes for variables, it does not contain the name of the
+variable. *)
 Inductive stmtacsl (K : iType) : iType :=
   | SADo : expr K → stmtacsl K
   | SASkip : stmtacsl K
@@ -25,7 +29,7 @@ Inductive stmtacsl (K : iType) : iType :=
   | SALoop : stmtacsl K → stmtacsl K
   | SAIf : expr K → stmtacsl K → stmtacsl K → stmtacsl K
   | SASwitch : expr K → stmtacsl K → stmtacsl K
-| SAAssert : predic K → stmtacsl K.
+  | SAAssert : predic K → stmtacsl K.
 
 Print esctx_item.
 Arguments SADo {_} _.
@@ -58,20 +62,17 @@ Arguments AReturnE {K}.
 Arguments AIfE {K} (_ _)%stmt_scope.
 Arguments ASwitchE {K} _%stmt_scope.
 
-(* Undefined states*)
 Inductive acslundef_state (K : iType) : iType :=
     AUndefExpr : ectx K → expr K → acslundef_state K
-| AUndefBranch : aesctx_item K → lockset → val K → acslundef_state K
-| AUndefPred : predic K -> acslundef_state K.
+  | AUndefBranch : aesctx_item K → lockset → val K → acslundef_state K.
 
 Arguments AUndefExpr {K} _%list_scope _%expr_scope.
 Arguments AUndefBranch {K} _ _ _%val_scope.
-Arguments AUndefPred {K} _. 
 
 Inductive acslfocus (K : iType) : iType :=
     AFStmt : direction K → stmtacsl K → acslfocus K
   | AFExpr : expr K → acslfocus K
-  | AFTerm : term K -> acslfocus K
+  | AFTerm : term K → acslfocus K
   | AFCall : funname → list (val K) → acslfocus K
   | AFReturn : funname → val K → acslfocus K
   | AFUndef : acslundef_state K → acslfocus K.
@@ -101,11 +102,11 @@ Arguments AIfR {K} _%expr_scope _%stmt_scope.
 Arguments ASwitch {K} _%expr_scope.
 
 Inductive acslctx_item (K : iType) : iType :=
-  AStmt : asctx_item K → acslctx_item K
-| ALocal : memory_basics.index → type K → acslctx_item K
-| AExpr : expr K → aesctx_item K → acslctx_item K
-| ATerm : term K -> acslctx_item K
-| AFun : ectx K → acslctx_item K
+    AStmt : asctx_item K → acslctx_item K
+  | ALocal : memory_basics.index → type K → acslctx_item K
+  | AExpr : expr K → aesctx_item K → acslctx_item K
+  | ATerm : term K -> acslctx_item K
+  | AFun : ectx K → acslctx_item K
 | AParams : funname → list (memory_basics.index * type K) → acslctx_item K.
 
 Notation acslctx K := (list (acslctx_item K)).
@@ -115,22 +116,22 @@ Arguments ALocal {_} _ _.
 Arguments AExpr {_} _ _.
 Arguments ATerm {_} _.
 Arguments AFun {_} _.
-Arguments AParams {_} _ _. 
+Arguments AParams {_} _ _.
 
 #[global] Instance aesctx_item_subst {K} :
-  Subst (aesctx_item K) (expr K) (stmtacsl K) := λ Ee e,
-    match Ee with
-    | ADoE => SADo e
-    | AReturnE => SAReturn e
-    | AIfE s1 s2 => SAIf e s1 s2
-    | ASwitchE s => SASwitch e s
-    end.
+    Subst (aesctx_item K) (expr K) (stmtacsl K) := λ Ee e,
+  match Ee with
+  | ADoE => SADo e
+  | AReturnE => SAReturn e
+  | AIfE s1 s2 => SAIf e s1 s2
+  | ASwitchE s => SASwitch e s
+end.
 
 Record stateacsl (K : iType) : iType := Stateacsl
-                                          { SACtx : acslctx K;
-                                            SAFoc : acslfocus K;
-                                            SAMem : mem K;
-                                            SALabm : stringmap (mem K);
-                                            SALabs : stringmap (stack K) }.
+  { SACtx : acslctx K;
+    SAFoc : acslfocus K;
+    SAMem : mem K;
+    SALabm : stringmap (mem K);
+    SALabs : stringmap (stack K) }.
 
 Arguments Stateacsl {_} _ _ _ _.
