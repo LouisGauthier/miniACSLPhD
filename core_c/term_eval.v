@@ -74,16 +74,24 @@ Some (inl (Ptr (addr_top o τ)))
 end
 | TVal v => Some v
 | TRtoL t1 => v ← term_eval t1 en rho rhomap m l labmap ≫= maybe inr;
-let vc := match v with
-          | ValC v1 => Some v1
-          | _ => None
-          end
-in
-match vc with
-| Some v1 =>
-    p ← maybe (VBase ∘ VPtr)  v1;
-guard (ptr_alive' m p);
-Some (inl p)
+let newmopt := match l with
+               | "Here" => Some m
+               | _ => lmap_lookup l labmap
+               end in
+match newmopt with
+| Some newm =>
+    let vc := match v with
+              | ValC v1 => Some v1
+              | _ => None
+              end
+    in
+    match vc with
+    | Some v1 =>
+        p ← maybe (VBase ∘ VPtr)  v1;
+        guard (ptr_alive' newm p);
+        Some (inl p)
+    | _ => None
+    end
 | _ => None
 end
 | TRofL t => p ← term_eval t en rho rhomap m l labmap ≫= maybe inl;
@@ -136,23 +144,37 @@ Some (inr  (ValC v'))
 end
 
 | TBaseAddr t => v ← term_eval t en rho rhomap m l labmap ≫= maybe inr;
-    let vc := match v with
-              | ValC v1 => Some v1
-              | _ => None      
-              end
-    in
-    match vc with
+let newmopt := match l with
+               | "Here" => Some m
+               | _ => lmap_lookup l labmap
+               end in
+match newmopt with
+| Some newm =>
+  let vc := match v with
+            | ValC v1 => Some v1
+            | _ => None      
+            end
+  in
+  match vc with
     | Some v1 => p ← maybe (VBase ∘ VPtr)  v1;
-    guard (ptr_alive' m p);
-        match p with
+      guard (ptr_alive' newm p);
+      match p with
         | Ptr a => Some (inl (Ptr (addr_top (addr_index a)(addr_type_object a))))
         | NULL t => Some (inl (NULL t))
         | _ => None
         end
     | _ => None
     end
+| _ => None
+end
 
 | TOffset t => v ← term_eval t en rho rhomap m l labmap ≫= maybe inr;
+let newmopt := match l with
+               | "Here" => Some m
+               | _ => lmap_lookup l labmap
+               end in
+match newmopt with
+| Some newm =>
     let vc := match v with
               | ValC v1 => Some v1
               | _ => None
@@ -160,7 +182,7 @@ end
     in 
     match vc with
     | Some v1 => p ← maybe (VBase ∘ VPtr)  v1;
-    guard (ptr_alive' m p);
+    guard (ptr_alive' newm p);
         match p with
         | Ptr a => Some (inr (ValC(VBase(VInt (IntType Signed ptr_rank)
                                            ((addr_object_offset en a)/char_bits)))))
@@ -169,9 +191,16 @@ end
         | _ => None
         end
     | _ => None
+    end
+| _ => None
 end
-
 | TBlckLen t => v ← term_eval t en rho rhomap m l labmap ≫= maybe inr;
+let newmopt := match l with
+               | "Here" => Some m
+               | _ => lmap_lookup l labmap
+               end in
+match newmopt with
+| Some newm =>
     let vc := match v with
               | ValC v1 => Some v1
               | _ => None
@@ -179,7 +208,7 @@ end
     in
     match vc with
     | Some v1 => p ← maybe (VBase ∘ VPtr)  v1;
-    guard (ptr_alive' m p);
+    guard (ptr_alive' newm p);
         match p with
             | Ptr a => Some (inr (ValC(VBase (VInt (IntType Signed ptr_rank)
                                                 (size_of en (addr_type_object a))))))
@@ -188,8 +217,9 @@ end
             | _ => None
         end
     | _ => None
+    end
+| _ => None
 end
-
 | TAt t lab => term_eval t en rho rhomap m lab labmap
 
 end.

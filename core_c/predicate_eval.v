@@ -25,6 +25,7 @@ with
   with init_val `{Env K} : val K -> Prop :=
 | initVBase : forall (en : Env K) (v : val K) (bt : base_type K) (vb : base_val K),
     v = VBase vb ->
+    bt = type_of vb ->
     vb <> VIndet bt ->
     init_val v
 | initVStruct : forall (en : Env K) (v : val K) (t : tag) (lval : list (val K)),
