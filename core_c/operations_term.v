@@ -202,7 +202,7 @@ Section operations_definitions2.
   Inductive comp_int : compop -> Z -> Z -> Prop :=
   | eq_int : forall (x y: Z) , x = y -> comp_int EqOp x y
   | lt_int : forall (x y : Z), x < y -> comp_int LtOp x y
-  | le_int : forall (x y : Z), x <= y -> comp_int LtOp x y.
+  | le_int : forall (x y : Z), x <= y -> comp_int LeOp x y.
   
  (*Comparison on miniACSL values*)
   Inductive comp_valt : compop -> env K -> val_term K -> val_term K -> Prop :=

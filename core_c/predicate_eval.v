@@ -6,13 +6,16 @@ Local Coercion Z.of_nat: nat >-> Z.
 
 (*Indutive to know wether a list of values is initialized or not*)
 Inductive init_val_list `{Env K} : list (val K) -> Prop :=
+| init_list_empty : init_val_list []
 | init_list : forall (lv tlv: list (val K)) (hlv : val K),
     lv = hlv::tlv ->
     init_val hlv ->
+    init_val_list tlv ->
     init_val_list lv
 with
 (*Indutive to know wether a list of bits is initialized or not*)
   init_bit_list `{Env K} : list (bit K) -> Prop :=
+  | init_bits_empty : init_bit_list []
 |init_bits : forall (lb tlb : list (bit K)) (hlb : bit K)(b : bool)(p : ptr_bit K),
     lb = hlb::tlb ->
     hlb =(BBit b) \/ hlb = BPtr p ->
@@ -46,7 +49,7 @@ Definition valid_pointer `{Env K} (en : env K) (p : ptr K) (m : mem K) : Prop :=
         match (addr_type a) with
         | TType nty =>
             ( (0<= (addr_object_offset en a)/char_bits) /\
-                ((addr_object_offset en a) + size_of en nty) <= size_of en (addr_type_object a) )
+                (((addr_object_offset en a)/char_bits) + size_of en nty) <= size_of en (addr_type_object a) )
         | _ => False
         end
     | _ => False
@@ -58,7 +61,6 @@ Fixpoint predicate_to_prop `{Env K} (p : predic K ) (en : env K)
   match p with
   | PTrue => True
   | PFalse => False
-  | PAt p1 =>  predicate_to_prop p1 en rho rhomap m l labmap
   | PRelOp op t1 t2  => let v1 := term_eval_right t1 en rho rhomap m l labmap in
                         let v2 := term_eval_right t2 en rho rhomap m l labmap in
                         match v1,v2 with
@@ -137,7 +139,7 @@ Lemma offsetbound2 t a en rho rhomap l labmap m nty :
     term_eval_right t en rho rhomap m l labmap = Some (ValC (VBase (VPtr (Ptr a)))) /\
     addr_type a = TType nty -> 
   (0<=(addr_object_offset en a)/char_bits) /\
-    ((addr_object_offset en a) + size_of en nty) <= size_of en (addr_type_object a).
+    (((addr_object_offset en a)/char_bits) + size_of en nty) <= size_of en (addr_type_object a).
   Proof.
     intros.
     destruct H0. destruct H1.

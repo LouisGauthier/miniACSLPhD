@@ -3,7 +3,6 @@ Require Export  terms.
 Inductive predic (K : iType) : iType :=
 | PTrue : predic K
 | PFalse : predic K
-| PAt : predic K -> predic K
 | PRelOp : compop -> term K -> term K ->  predic K
 | POr : predic K -> predic K -> predic K
 | PAnd : predic K -> predic K -> predic K
@@ -19,7 +18,6 @@ Local Open Scope pred_scope.
 
 Arguments PTrue {_}.
 Arguments PFalse {_}.
-Arguments PAt {_} _%pred_scope.
 Arguments PRelOp {_} _ _%term_scope _%term_scope.
 Arguments POr {_} _%pred_scope _%pred_scope. 
 Arguments PAnd {_} _%pred_scope _%pred_scope.

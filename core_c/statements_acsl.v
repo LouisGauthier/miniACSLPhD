@@ -3,12 +3,10 @@ From stdpp Require Import stringmap mapset zmap.
 (* From stdpp Require Import stringmap mapset zmap. *)
 Require Import optionmap.
 Require Export predicates predicate_eval statements smallstep.
-Print predicate_to_prop.
 
 Reserved Notation "Γ \ δ ⊢ₛ S1 ⇒ S2"
   (at level 74, δ at next level,
     format "Γ \  δ  ⊢ₛ  '[' S1  ⇒ '/'  S2 ']'").
-Print sctx_item.
 
 (** * Statements *)
 (** The construct [SDo e] executes the expression [e] and ignores the result.
@@ -31,7 +29,6 @@ Inductive stmtacsl (K : iType) : iType :=
   | SASwitch : expr K → stmtacsl K → stmtacsl K
   | SAAssert : predic K → stmtacsl K.
 
-Print esctx_item.
 Arguments SADo {_} _.
 Arguments SASkip {_}.
 Arguments SAGoto {_} _%string.
@@ -64,10 +61,12 @@ Arguments ASwitchE {K} _%stmt_scope.
 
 Inductive acslundef_state (K : iType) : iType :=
     AUndefExpr : ectx K → expr K → acslundef_state K
-  | AUndefBranch : aesctx_item K → lockset → val K → acslundef_state K.
+| AUndefBranch : aesctx_item K → lockset → val K → acslundef_state K
+| AUndefPred : predic K -> acslundef_state K.
 
 Arguments AUndefExpr {K} _%list_scope _%expr_scope.
 Arguments AUndefBranch {K} _ _ _%val_scope.
+Arguments AUndefPred {K} _. 
 
 Inductive acslfocus (K : iType) : iType :=
     AFStmt : direction K → stmtacsl K → acslfocus K
